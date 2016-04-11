@@ -18,7 +18,7 @@
     <parent>
         <groupId>org.blocks4j.reconf</groupId>
         <artifactId>reconf-parent</artifactId>
-        <version>3.0.6-SNAPSHOT</version>
+        <version>3.0.7-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>reconf-client</artifactId>
@@ -69,6 +69,16 @@
         <dependency>
             <groupId>cglib</groupId>
             <artifactId>cglib</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
             <scope>provided</scope>
         </dependency>
         <!-- Tests -->
