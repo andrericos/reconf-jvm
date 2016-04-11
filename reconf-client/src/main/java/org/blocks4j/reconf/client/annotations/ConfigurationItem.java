@@ -33,4 +33,5 @@ public @interface ConfigurationItem {
     String product() default StringUtils.EMPTY;
     Class<? extends ConfigurationAdapter> adapter() default NoConfigurationAdapter.class;
     String qualifier() default StringUtils.EMPTY;
+    boolean isAutoSync() default false;
 }

@@ -28,7 +28,7 @@ public class ConfigurationItemElementValidator {
 
     public static Map<String, String> validate(int pos, ConfigurationItemElement arg) {
         if (arg == null) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
 
         Map<String, String> errors = new LinkedHashMap<String, String>();

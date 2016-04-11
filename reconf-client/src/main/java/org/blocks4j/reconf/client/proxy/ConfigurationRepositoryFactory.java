@@ -1,5 +1,5 @@
 /*
- *   Copyright 2013-2015 Blocks4J Team (www.blocks4j.org)
+ *   Copyright 2013-2016 Blocks4J Team (www.blocks4j.org)
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,14 +15,6 @@
  */
 package org.blocks4j.reconf.client.proxy;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.collections4.CollectionUtils;
 import org.blocks4j.reconf.client.annotations.ConfigurationItem;
 import org.blocks4j.reconf.client.annotations.UpdateConfigurationRepository;
@@ -36,6 +28,15 @@ import org.blocks4j.reconf.client.setup.Environment;
 import org.blocks4j.reconf.infra.i18n.MessagesBundle;
 import org.blocks4j.reconf.infra.log.LoggerHolder;
 import org.blocks4j.reconf.infra.system.LineSeparator;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ConfigurationRepositoryFactory implements InvocationHandler {
 
@@ -123,12 +124,14 @@ public class ConfigurationRepositoryFactory implements InvocationHandler {
         ConfigurationRepositoryUpdater thread = new ConfigurationRepositoryUpdater(repo, ServiceLocator.defaultImplementation, factory);
         Environment.addThreadToCheck(thread);
         thread.start();
-        return (T) Proxy.newProxyInstance(arg.getClassLoader(), new Class<?>[] {arg}, factory);
+        return (T) Proxy.newProxyInstance(arg.getClassLoader(), new Class<?>[]{arg}, factory);
     }
 
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         boolean updateAnnotationPresent = method.isAnnotationPresent(UpdateConfigurationRepository.class);
-        boolean configurationAnnotationPresent = method.isAnnotationPresent(ConfigurationItem.class);
+
+        ConfigurationItem configurationAnnotation = method.getAnnotation(ConfigurationItem.class);
+        boolean configurationAnnotationPresent = (configurationAnnotation != null);
 
         if (!configurationAnnotationPresent && !updateAnnotationPresent) {
             return method.invoke(this, args);
@@ -140,8 +143,14 @@ public class ConfigurationRepositoryFactory implements InvocationHandler {
 
         Object configValue = null;
 
-        if(configurationAnnotationPresent) {
-            configValue = updater.getValueOf(method);
+        if (configurationAnnotationPresent) {
+            if (configurationAnnotation.isAutoSync()) {
+                configValue = AutoSyncProxyBuilder.forMethod(method)
+                                                  .updater(this.updater)
+                                                  .build();
+            } else {
+                configValue = updater.getValueOf(method);
+            }
         }
 
         return configValue;

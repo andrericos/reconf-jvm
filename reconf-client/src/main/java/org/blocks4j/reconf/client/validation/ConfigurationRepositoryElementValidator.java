@@ -15,14 +15,15 @@
  */
 package org.blocks4j.reconf.client.validation;
 
+import org.apache.commons.lang3.StringUtils;
+import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
+import org.blocks4j.reconf.infra.i18n.MessagesBundle;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.StringUtils;
-import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
-import org.blocks4j.reconf.infra.i18n.MessagesBundle;
 
 public class ConfigurationRepositoryElementValidator {
 
@@ -30,7 +31,7 @@ public class ConfigurationRepositoryElementValidator {
 
     public static Map<String, String> validate(ConfigurationRepositoryElement arg) {
         if (arg == null) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
 
         Map<String, String> errors = new LinkedHashMap<String, String>();
@@ -67,7 +68,7 @@ public class ConfigurationRepositoryElementValidator {
             errors.put("@ConfigurationRepository", msg.get("rate.error"));
         }
 
-        if (arg.getTimeUnit() == null || !EnumSet.of(TimeUnit.MINUTES,TimeUnit.HOURS,TimeUnit.DAYS).contains(arg.getTimeUnit())) {
+        if (arg.getTimeUnit() == null || !EnumSet.of(TimeUnit.MINUTES, TimeUnit.HOURS, TimeUnit.DAYS).contains(arg.getTimeUnit())) {
             errors.put("@ConfigurationRepository", msg.get("timeUnit.null"));
         }
     }

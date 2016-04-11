@@ -15,11 +15,6 @@
  */
 package org.blocks4j.reconf.client.proxy;
 
-import org.blocks4j.reconf.client.proxy.ConfigurationRepositoryFactory;
-import org.blocks4j.reconf.client.proxy.Customization;
-
-
-
 public class EqualsTest {
 
     public static void main(String[] args) throws Exception {
