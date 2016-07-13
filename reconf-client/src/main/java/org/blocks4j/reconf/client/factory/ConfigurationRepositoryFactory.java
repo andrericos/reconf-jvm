@@ -145,6 +145,9 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
 
     @SuppressWarnings("unchecked")
     private synchronized <T> T newInstance(Class<T> arg, ConfigurationRepositoryElement configurationRepositoryElement) {
+
+        
+
         ConfigurationRepositoryUpdater repositoryUpdater = new ConfigurationRepositoryUpdater(this.environment, this.repository, configurationRepositoryElement);
         this.updatersCreated.add(repositoryUpdater);
 

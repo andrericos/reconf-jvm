@@ -15,6 +15,7 @@
     "/reconf/client/IntegerSetStringMap_AllFull": "['134':['xico'],'123':['xico']]",
     "/reconf/client/IntegerSetStringMap_oneEmpty": "['134':['xico'],'123':[]]",
     "/reconf/client/IntegerMapStringSetStringMap_AllFull": "['134':['xico':['set1','set2']], '133':['xico':['set1','set2']]]",
-    "/reconf/client/IntegerMapStringSetStringMap_oneEmpty": "['134':['xico':['set1','set2']], '133':['xico':[]],'132':['xico':[]]]"
+    "/reconf/client/IntegerMapStringSetStringMap_oneEmpty": "['134':['xico':['set1','set2']], '133':['xico':[]],'132':['xico':[]]]",
+    "/reconf/client/json": "{\"field\":\"fieldValue\", \"fieldArray\":[\"fieldArray1\",\"fieldArray2\",\"fieldArray3\"]}"
   }
 }

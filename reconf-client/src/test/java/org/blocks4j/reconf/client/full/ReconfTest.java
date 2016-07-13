@@ -4,6 +4,7 @@ package org.blocks4j.reconf.client.full;
 import org.blocks4j.reconf.annotations.ConfigurationItem;
 import org.blocks4j.reconf.annotations.ConfigurationRepository;
 import org.blocks4j.reconf.client.adapter.DefaultAntlr4ConfigurationAdapter;
+import org.blocks4j.reconf.client.adapter.Jackson2ConfigurationAdapter;
 
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,9 @@ public interface ReconfTest {
 
     @ConfigurationItem(value = "IntegerMapStringSetStringMap_oneEmpty", adapter = DefaultAntlr4ConfigurationAdapter.class)
     Map<Integer, Map<String, Set<String>>> getIntegerMapStringSetStringMap_OneEmpty();
+
+    @ConfigurationItem(value = "json", adapter = Jackson2ConfigurationAdapter.class)
+    JsonClass getJson();
 
 
 }

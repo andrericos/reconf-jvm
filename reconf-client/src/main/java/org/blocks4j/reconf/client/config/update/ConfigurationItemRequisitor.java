@@ -17,10 +17,9 @@ package org.blocks4j.reconf.client.config.update;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.blocks4j.reconf.adapter.ConfigurationAdapter;
+import org.blocks4j.reconf.client.config.ConfigurationItemId;
 import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
-import org.blocks4j.reconf.client.setup.Environment;
 import org.blocks4j.reconf.data.MethodReturnData;
-import org.blocks4j.reconf.infra.http.ReconfServer;
 import org.blocks4j.reconf.infra.i18n.MessagesBundle;
 
 import java.lang.reflect.Constructor;
@@ -30,17 +29,17 @@ import java.util.Collection;
 import java.util.Map;
 
 
-public class RemoteConfigurationItemRequisitor {
+public class ConfigurationItemRequisitor {
 
-    private final static MessagesBundle msg = MessagesBundle.getBundle(RemoteConfigurationItemRequisitor.class);
+    private final static MessagesBundle msg = MessagesBundle.getBundle(ConfigurationItemRequisitor.class);
 
-    private ReconfServer stub;
+    private ConfigurationSource configurationSource;
     private ConfigurationItemElement configurationItemElement;
     private ConfigurationAdapter configurationAdapter;
     private Type returnType;
 
-    public RemoteConfigurationItemRequisitor(Environment environment, ConfigurationItemElement configurationItemElement) {
-        this.stub = environment.getReconfServerStub();
+    public ConfigurationItemRequisitor(ConfigurationItemElement configurationItemElement, ConfigurationSource configurationSource) {
+        this.configurationSource = configurationSource;
         this.configurationItemElement = configurationItemElement;
         this.configurationAdapter = this.getRemoteAdapter(configurationItemElement);
         this.returnType = this.getReturnType(configurationItemElement);
@@ -67,9 +66,11 @@ public class RemoteConfigurationItemRequisitor {
     public ConfigurationItemUpdateResult doRequest() {
         ConfigurationItemUpdateResult.Builder itemUpdateBuilder;
         try {
-            String rawValue = this.stub.get(this.configurationItemElement.getProduct(),
-                                            this.configurationItemElement.getComponent(),
-                                            this.configurationItemElement.getValue());
+            ConfigurationResponse configurationResponse = this.configurationSource.get(new ConfigurationItemId(this.configurationItemElement.getProduct(),
+                                                                                                               this.configurationItemElement.getComponent(),
+                                                                                                               this.configurationItemElement.getValue()));
+
+            String rawValue = configurationResponse.getRawConfiguration();
 
             MethodReturnData methodData = new MethodReturnData(this.returnType, rawValue);
             itemUpdateBuilder = ConfigurationItemUpdateResult.Builder.update(this.configurationAdapter.adapt(methodData))

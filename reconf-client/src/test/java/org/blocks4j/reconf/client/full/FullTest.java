@@ -112,6 +112,15 @@ public class FullTest extends LocalServerTestBase {
                 Assert.assertNotNull(stringSetEntry.getValue());
             }
         }
+
+        JsonClass jsonClass = reconfTest.getJson();
+        Assert.assertNotNull(jsonClass);
+        Assert.assertNotNull(jsonClass.getField());
+        String[] fieldArray = jsonClass.getFieldArray();
+        Assert.assertNotNull(fieldArray);
+        Assert.assertEquals(3, fieldArray.length);
+
+
     }
 
     @After
