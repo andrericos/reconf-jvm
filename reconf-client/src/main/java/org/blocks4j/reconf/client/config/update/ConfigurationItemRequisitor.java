@@ -66,24 +66,20 @@ public class ConfigurationItemRequisitor {
     public ConfigurationItemUpdateResult doRequest() {
         ConfigurationItemUpdateResult.Builder itemUpdateBuilder;
         ConfigurationItemId configurationItemId = this.configurationItemElement.getConfigurationItemId();
-        try {
-            ConfigurationResponse configurationResponse = this.configurationSource.get(configurationItemId);
+        ConfigurationResponse configurationResponse = this.configurationSource.get(configurationItemId);
 
-            if (configurationResponse.isSuccess()) {
-                String rawValue = configurationResponse.getRawConfiguration();
+        if (configurationResponse.isSuccess()) {
+            String rawValue = configurationResponse.getRawConfiguration();
 
-                MethodReturnData methodData = new MethodReturnData(this.returnType, rawValue);
-                itemUpdateBuilder = ConfigurationItemUpdateResult.Builder.update(this.configurationAdapter.adapt(methodData))
-                                                                         .valueRead(rawValue)
-                                                                         .configurationItemId(configurationItemId)
-                                                                         .method(this.configurationItemElement.getMethod())
-                                                                         .cast(this.configurationItemElement.getMethod().getReturnType())
-                                                                         .from(ConfigurationItemUpdateResult.Source.server);
-            } else {
-                throw new Exception(configurationResponse.getRawConfiguration());
-            }
-        } catch (Throwable throwable) {
-            itemUpdateBuilder = ConfigurationItemUpdateResult.Builder.error(throwable)
+            MethodReturnData methodData = new MethodReturnData(this.returnType, rawValue);
+            itemUpdateBuilder = ConfigurationItemUpdateResult.Builder.update(this.configurationAdapter.adapt(methodData))
+                                                                     .valueRead(rawValue)
+                                                                     .configurationItemId(configurationItemId)
+                                                                     .method(this.configurationItemElement.getMethod())
+                                                                     .cast(this.configurationItemElement.getMethod().getReturnType())
+                                                                     .from(ConfigurationItemUpdateResult.Source.server);
+        } else {
+            itemUpdateBuilder = ConfigurationItemUpdateResult.Builder.error(configurationResponse.getRawConfiguration())
                                                                      .configurationItemId(configurationItemId)
                                                                      .method(this.configurationItemElement.getMethod())
                                                                      .cast(this.configurationItemElement.getMethod().getReturnType())

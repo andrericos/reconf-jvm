@@ -34,7 +34,7 @@ public class ConfigurationItemUpdateResult implements Cloneable {
     private Method method;
     private Class<?> cast;
     private String rawValue;
-    private Throwable error;
+    private String message;
     private Source source;
 
     private ConfigurationItemUpdateResult() {
@@ -60,8 +60,8 @@ public class ConfigurationItemUpdateResult implements Cloneable {
         return rawValue;
     }
 
-    public Throwable getError() {
-        return error;
+    public String getMessage() {
+        return message;
     }
 
     public Type getType() {
@@ -112,12 +112,12 @@ public class ConfigurationItemUpdateResult implements Cloneable {
             return result;
         }
 
-        public static Builder error(Throwable t) {
+        public static Builder error(String message) {
             Builder result = new Builder();
             result.inner.type = Type.error;
             result.inner.object = null;
             result.inner.success = false;
-            result.inner.error = t;
+            result.inner.message = message;
             return result;
         }
 
