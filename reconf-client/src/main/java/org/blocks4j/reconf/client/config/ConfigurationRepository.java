@@ -1,13 +1,9 @@
 package org.blocks4j.reconf.client.config;
 
-import org.blocks4j.reconf.client.config.update.ConfigurationItemUpdateResult;
-import org.blocks4j.reconf.infra.shutdown.ShutdownBean;
+public interface ConfigurationRepository {
 
-import java.lang.reflect.Method;
+    Object getValueOf(ConfigurationItemId configurationItemId);
 
-public interface ConfigurationRepository extends ShutdownBean {
+    void update(ConfigurationItemId configurationItemId, Object value);
 
-    Object getValueOf(Method method);
-
-    ConfigurationItemUpdateResult update(ConfigurationItemUpdateResult result);
 }

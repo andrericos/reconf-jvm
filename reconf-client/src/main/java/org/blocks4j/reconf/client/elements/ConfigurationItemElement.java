@@ -20,109 +20,22 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.blocks4j.reconf.adapter.ConfigurationAdapter;
 import org.blocks4j.reconf.annotations.ConfigurationItem;
-import org.blocks4j.reconf.annotations.UpdateConfigurationRepository;
 import org.blocks4j.reconf.client.adapter.DefaultAntlr4ConfigurationAdapter;
-import org.blocks4j.reconf.infra.i18n.MessagesBundle;
-import org.blocks4j.reconf.infra.throwables.ReConfInitializationError;
+import org.blocks4j.reconf.client.config.ConfigurationItemId;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class ConfigurationItemElement {
 
-    private static final MessagesBundle msg = MessagesBundle.getBundle(ConfigurationItemElement.class);
-    private String methodName;
-    private Method method;
-    private String value;
-    private String component;
-    private String product;
-    private Class<? extends ConfigurationAdapter> adapter;
+    private final Method method;
+    private final Class<? extends ConfigurationAdapter> adapter;
+    private ConfigurationItemId configurationItemId;
 
-    public static List<ConfigurationItemElement> from(ConfigurationRepositoryElement repository) {
-        List<ConfigurationItemElement> result = new ArrayList<ConfigurationItemElement>();
-
-        for (Method method : repository.getInterfaceClass().getMethods()) {
-            if (Modifier.isAbstract(method.getModifiers())) {
-                checkAnnotations(method);
-
-                ConfigurationItem ann = method.getAnnotation(ConfigurationItem.class);
-
-                if (ann != null) {
-                    result.add(createConfigurationItemElement(repository, method, ann));
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private static void checkAnnotations(Method method) {
-        if (!(method.isAnnotationPresent(ConfigurationItem.class) || method.isAnnotationPresent(UpdateConfigurationRepository.class))) {
-            throw new ReConfInitializationError(msg.format("error.not.configured.method", method.toString()));
-        }
-    }
-
-    private static ConfigurationItemElement createConfigurationItemElement(ConfigurationRepositoryElement repository, Method method, ConfigurationItem ann) {
-        ConfigurationItemElement resultItem = null;
-
-        for (ConfigurationItemElement item : repository.getConfigurationItems()) {
-            if (StringUtils.equals(item.getMethodName(), method.getName())) {
-                resultItem = item;
-            }
-        }
-
-        if (resultItem == null) {
-            resultItem = new ConfigurationItemElement();
-            resultItem.setMethodName(method.getName());
-            resultItem.setAdapter(ann.adapter() == ConfigurationAdapter.class ? DefaultAntlr4ConfigurationAdapter.class : ann.adapter());
-            resultItem.setValue(ann.value());
-        }
-
-        resultItem.setMethod(method);
-
-        defineItemProductComponentOverride(repository, resultItem, ann);
-
-        return resultItem;
-    }
-
-    private static void defineItemProductComponentOverride(ConfigurationRepositoryElement repo, ConfigurationItemElement resultItem, ConfigurationItem annItem) {
-        if (StringUtils.isBlank(resultItem.getProduct()) && StringUtils.isNotBlank(annItem.product())) {
-            resultItem.setProduct(annItem.product());
-        } else {
-            resultItem.setProduct(repo.getProduct());
-        }
-
-        if (StringUtils.isBlank(resultItem.getComponent()) && StringUtils.isNotBlank(annItem.component())) {
-            resultItem.setComponent(annItem.component());
-        } else {
-            resultItem.setComponent(repo.getComponent());
-        }
-    }
-
-    public String getMethodName() {
-        return methodName;
-    }
-
-    public void setMethodName(String methodName) {
-        this.methodName = methodName;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
-    }
-
-    public Class<? extends ConfigurationAdapter> getAdapter() {
-        return adapter;
-    }
-
-    public void setAdapter(Class<? extends ConfigurationAdapter> adapter) {
+    private ConfigurationItemElement(ConfigurationItemId configurationItemId, Method method, Class<? extends ConfigurationAdapter> adapter) {
+        this.method = method;
+        this.configurationItemId = configurationItemId;
         this.adapter = adapter;
     }
 
@@ -130,32 +43,24 @@ public class ConfigurationItemElement {
         return method;
     }
 
-    public void setMethod(Method method) {
-        this.method = method;
+    public ConfigurationItemId getConfigurationItemId() {
+        return configurationItemId;
     }
 
-    public String getComponent() {
-        return component;
+    public Class<? extends ConfigurationAdapter> getAdapter() {
+        return adapter;
     }
 
-    public void setComponent(String component) {
-        this.component = component;
-    }
-
-    public String getProduct() {
-        return product;
-    }
-
-    public void setProduct(String product) {
-        this.product = product;
+    public static Builder forConfigurationRepositoryElement(ConfigurationRepositoryElement repositoryElement) {
+        return new Builder(repositoryElement);
     }
 
     @Override
     public String toString() {
         ToStringBuilder result = new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE).append("method", StringUtils.replace(getMethod().toString(), "public abstract ", ""));
-        addToString(result, "product", getProduct());
-        addToString(result, "component", getComponent());
-        result.append("value", getValue());
+        addToString(result, "product", this.getConfigurationItemId().getProduct());
+        addToString(result, "component", this.getConfigurationItemId().getComponent());
+        result.append("name", this.getConfigurationItemId().getName());
         return result.toString();
     }
 
@@ -165,8 +70,49 @@ public class ConfigurationItemElement {
         }
     }
 
-    private static boolean isConcrete(Method method) {
-        return !Modifier.isAbstract(method.getModifiers());
+    public void override(ConfigurationRepositoryElement configurationRepositoryElement) {
+        this.configurationItemId = this.configurationItemId.override(configurationRepositoryElement.getConfigurationRepositoryId());
     }
 
+    public static class Builder {
+
+        private ConfigurationRepositoryElement repositoryElement;
+
+        private Method method;
+
+        private Builder(ConfigurationRepositoryElement repositoryElement) {
+            this.repositoryElement = repositoryElement;
+        }
+
+        public Builder forMethod(Method method) {
+            this.method = method;
+            return this;
+        }
+
+        public ConfigurationItemElement build() {
+            ConfigurationItem configurationItemAnnotation = method.getAnnotation(ConfigurationItem.class);
+
+            ConfigurationItemId configurationItemId = this.extractConfigurationItemInformation(configurationItemAnnotation);
+            configurationItemId.override(this.repositoryElement.getConfigurationRepositoryId());
+
+            return new ConfigurationItemElement(configurationItemId, this.method, this.getAdapter(configurationItemAnnotation));
+        }
+
+        @NotNull
+        private Class<? extends ConfigurationAdapter> getAdapter(ConfigurationItem configurationItemAnnotation) {
+            Class<? extends ConfigurationAdapter> adapter = configurationItemAnnotation.adapter();
+
+            if (adapter == ConfigurationAdapter.class) {
+                adapter = DefaultAntlr4ConfigurationAdapter.class;
+            }
+
+            return adapter;
+        }
+
+        private ConfigurationItemId extractConfigurationItemInformation(ConfigurationItem configurationItemAnnotation) {
+            return new ConfigurationItemId(configurationItemAnnotation.product(),
+                                           configurationItemAnnotation.component(),
+                                           configurationItemAnnotation.value());
+        }
+    }
 }

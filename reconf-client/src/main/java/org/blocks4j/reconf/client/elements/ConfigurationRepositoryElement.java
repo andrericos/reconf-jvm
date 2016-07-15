@@ -18,146 +18,127 @@ package org.blocks4j.reconf.client.elements;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.blocks4j.reconf.client.config.update.notification.ConfigurationItemListener;
+import org.blocks4j.reconf.annotations.ConfigurationRepository;
+import org.blocks4j.reconf.client.config.ConfigurationItemId;
+import org.blocks4j.reconf.client.config.ConfigurationRepositoryId;
 import org.blocks4j.reconf.client.customization.Customization;
-import org.blocks4j.reconf.client.setup.config.ConnectionSettings;
 import org.blocks4j.reconf.infra.system.LineSeparator;
+import org.blocks4j.reconf.infra.throwables.ReConfInitializationError;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 public class ConfigurationRepositoryElement {
 
-    private ConnectionSettings connectionSettings;
-    private String product;
-    private String component;
-    private Integer rate;
-    private TimeUnit timeUnit;
-    private Collection<ConfigurationItemListener> configurationItemListeners = new ArrayList<ConfigurationItemListener>();
+    private final ConfigurationRepositoryId configurationRepositoryId;
+    private final Integer rate;
+    private final TimeUnit timeUnit;
 
-    private Class<?> interfaceClass;
-    private List<ConfigurationItemElement> configurationItems = new ArrayList<ConfigurationItemElement>();
+    private final Class<?> interfaceClass;
+    private final List<ConfigurationItemElement> configurationItems;
     private Customization customization;
 
-
-    public ConnectionSettings getConnectionSettings() {
-        return connectionSettings;
+    private ConfigurationRepositoryElement(ConfigurationRepositoryId configurationRepositoryId,
+                                           Integer rate,
+                                           TimeUnit timeUnit,
+                                           Class<?> interfaceClass) {
+        this.configurationRepositoryId = configurationRepositoryId;
+        this.rate = rate;
+        this.timeUnit = timeUnit;
+        this.interfaceClass = interfaceClass;
+        this.configurationItems = new ArrayList<>();
     }
 
-    public void setConnectionSettings(ConnectionSettings connectionSettings) {
-        this.connectionSettings = connectionSettings;
-    }
-
-    public String getComponent() {
-        return component;
-    }
-
-    public void setComponent(String component) {
-        this.component = component;
-    }
-
-    public Collection<String> getFullProperties() {
-        Set<String> result = new LinkedHashSet<>();
-        for (ConfigurationItemElement elem : configurationItems) {
-            String productName;
-            if (StringUtils.isEmpty(elem.getProduct())) {
-                productName = getProduct();
-            } else {
-                productName = elem.getProduct();
-            }
-
-            String componentName;
-            if (StringUtils.isEmpty(elem.getComponent())) {
-                componentName = getComponent();
-            } else {
-                componentName = elem.getComponent();
-            }
-            result.add(FullPropertyElement.from(productName, componentName, elem.getValue()));
+    public static ConfigurationRepositoryElement forRepository(Class<?> repository) {
+        if (!repository.isInterface()) {
+            throw new ReConfInitializationError("is not a interface");
         }
-        return result;
+
+        if (!repository.isAnnotationPresent(ConfigurationRepository.class)) {
+            return null;
+        }
+
+        ConfigurationRepository ann = repository.getAnnotation(ConfigurationRepository.class);
+
+        return new ConfigurationRepositoryElement(new ConfigurationRepositoryId(ann.product(), ann.component()),
+                                                  ann.pollingRate(),
+                                                  ann.pollingTimeUnit(),
+                                                  repository);
     }
 
-    public String getProduct() {
-        return product;
-    }
-
-    public void setProduct(String product) {
-        this.product = product;
+    public ConfigurationRepositoryId getConfigurationRepositoryId() {
+        return configurationRepositoryId;
     }
 
     public Class<?> getInterfaceClass() {
         return interfaceClass;
     }
 
-    public void setInterfaceClass(Class<?> interfaceClass) {
-        this.interfaceClass = interfaceClass;
-    }
-
     public List<ConfigurationItemElement> getConfigurationItems() {
         return configurationItems;
-    }
-
-    public void setConfigurationItems(List<ConfigurationItemElement> configurationItems) {
-        this.configurationItems = configurationItems;
     }
 
     public Customization getCustomization() {
         return customization;
     }
 
-    public void setCustomization(Customization customization) {
-        this.customization = customization;
-    }
-
     public Integer getRate() {
         return rate;
-    }
-
-    public void setRate(Integer rate) {
-        this.rate = rate;
     }
 
     public TimeUnit getTimeUnit() {
         return timeUnit;
     }
 
-    public void setTimeUnit(TimeUnit timeUnit) {
-        this.timeUnit = timeUnit;
+    public void applyCustomization(Customization customization) {
+        this.customization = customization;
+
+        this.getConfigurationRepositoryId().applyCustomization(customization);
+
+        this.getConfigurationItems().forEach(item -> item.getConfigurationItemId().applyCustomization(customization));
     }
 
-    public Collection<ConfigurationItemListener> getConfigurationItemListeners() {
-        return configurationItemListeners;
-    }
+    public Collection<String> getFullProperties() {
+        Set<String> result = new LinkedHashSet<>();
+        for (ConfigurationItemElement elem : configurationItems) {
+            String productName;
+            if (StringUtils.isEmpty(elem.getConfigurationItemId().getProduct())) {
+                productName = getConfigurationRepositoryId().getProduct();
+            } else {
+                productName = elem.getConfigurationItemId().getProduct();
+            }
 
-    public void setConfigurationItemListeners(Collection<ConfigurationItemListener> configurationItemListeners) {
-        if (configurationItemListeners != null) {
-            this.configurationItemListeners = configurationItemListeners;
+            String componentName;
+            if (StringUtils.isEmpty(elem.getConfigurationItemId().getComponent())) {
+                componentName = getConfigurationRepositoryId().getComponent();
+            } else {
+                componentName = elem.getConfigurationItemId().getComponent();
+            }
+            result.add(FullPropertyElement.from(productName, componentName, elem.getConfigurationItemId().getName()));
         }
+        return result;
     }
 
-    public void addConfigurationItemListener(ConfigurationItemListener configurationItemListener) {
-        if (configurationItemListener != null) {
-            this.configurationItemListeners.add(configurationItemListener);
-        }
-    }
 
     @Override
     public String toString() {
         ToStringBuilder result = new ToStringBuilder(this, ToStringStyle.MULTI_LINE_STYLE)
                 .append("class", getInterfaceClass())
-                .append("product", getProduct())
-                .append("component", getComponent())
+                .append("product", getConfigurationRepositoryId().getProduct())
+                .append("component", getConfigurationRepositoryId().getComponent())
                 .append("pollingRate", getRate())
                 .append("pollingTimeUnit", getTimeUnit());
-        if (!configurationItemListeners.isEmpty()) {
-            List<ConfigurationItemListener> asList = new ArrayList<>(configurationItemListeners);
-            for (int i = 0; i < asList.size(); i++) {
-                result.append("item-listener-" + (i + 1), asList.get(i).getClass().getName());
-            }
-        }
 
         result.append("@ConfigurationItems", LineSeparator.value() + getConfigurationItems());
         return result.toString();
     }
+
 }

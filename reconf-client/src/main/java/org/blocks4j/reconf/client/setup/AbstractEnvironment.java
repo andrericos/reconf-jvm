@@ -1,10 +1,10 @@
 package org.blocks4j.reconf.client.setup;
 
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
-import org.blocks4j.reconf.client.config.update.ConfigurationResponse;
+import org.blocks4j.reconf.client.config.contingency.LocalCache;
+import org.blocks4j.reconf.client.config.contingency.LocalCacheImpl;
 import org.blocks4j.reconf.client.config.update.ConfigurationSource;
 import org.blocks4j.reconf.client.config.update.HttpConfigurationSource;
-import org.blocks4j.reconf.client.config.update.SourceType;
 import org.blocks4j.reconf.client.setup.config.ConnectionSettings;
 import org.blocks4j.reconf.client.setup.config.ReconfConfiguration;
 import org.blocks4j.reconf.infra.http.ReconfServerStub;
@@ -19,6 +19,7 @@ public abstract class AbstractEnvironment implements Environment {
 
     private List<ShutdownBean> managedShutdownObjects;
     private ConfigurationSource remoteSource;
+    private LocalCache localCache;
     private ReconfConfiguration reconfConfiguration;
     private ConfigurationRepository repository;
 
@@ -59,8 +60,13 @@ public abstract class AbstractEnvironment implements Environment {
     }
 
     @Override
-    public ConfigurationSource getLocalCacheSource() {
-        return configurationItemId -> ConfigurationResponse.createErrorResponse(configurationItemId, SourceType.LOCAL, new Exception());
+    public LocalCache getLocalCacheSource() {
+        if (this.localCache == null) {
+            this.localCache = new LocalCacheImpl(this.reconfConfiguration.getLocalCacheSettings());
+            this.manageShutdownObject(this.localCache);
+        }
+
+        return this.localCache;
     }
 
     @Override

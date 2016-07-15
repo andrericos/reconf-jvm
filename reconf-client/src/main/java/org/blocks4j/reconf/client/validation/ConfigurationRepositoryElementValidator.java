@@ -17,7 +17,6 @@ package org.blocks4j.reconf.client.validation;
 
 import org.apache.commons.lang3.StringUtils;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
-import org.blocks4j.reconf.client.setup.validation.ConnectionSettingsValidator;
 import org.blocks4j.reconf.infra.i18n.MessagesBundle;
 
 import java.util.Collections;
@@ -35,9 +34,8 @@ public class ConfigurationRepositoryElementValidator {
             return Collections.emptyMap();
         }
 
-        Map<String, String> errors = new LinkedHashMap<String, String>();
+        Map<String, String> errors = new LinkedHashMap<>();
 
-        checkConnectionSettings(arg, errors);
         checkComponent(arg, errors);
         checkProduct(arg, errors);
         checkUpdateFrequency(arg, errors);
@@ -46,20 +44,14 @@ public class ConfigurationRepositoryElementValidator {
         return errors;
     }
 
-    private static void checkConnectionSettings(ConfigurationRepositoryElement arg, Map<String, String> errors) {
-        for (String error : ConnectionSettingsValidator.validate(arg.getConnectionSettings())) {
-            errors.put("connectionSettings", error);
-        }
-    }
-
     private static void checkComponent(ConfigurationRepositoryElement arg, Map<String, String> errors) {
-        if (StringUtils.isEmpty(arg.getComponent())) {
+        if (StringUtils.isEmpty(arg.getConfigurationRepositoryId().getComponent())) {
             errors.put("@ConfigurationRepository", msg.get("error.component"));
         }
     }
 
     private static void checkProduct(ConfigurationRepositoryElement arg, Map<String, String> errors) {
-        if (StringUtils.isEmpty(arg.getProduct())) {
+        if (StringUtils.isEmpty(arg.getConfigurationRepositoryId().getProduct())) {
             errors.put("@ConfigurationRepository", msg.get("error.product"));
         }
     }

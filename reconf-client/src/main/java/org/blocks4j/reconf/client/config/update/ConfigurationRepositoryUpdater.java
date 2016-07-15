@@ -1,10 +1,15 @@
 package org.blocks4j.reconf.client.config.update;
 
+import com.google.common.collect.Sets;
+import org.blocks4j.reconf.client.config.ConfigurationItemId;
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
+import org.blocks4j.reconf.client.config.listener.ModificationEvent;
+import org.blocks4j.reconf.client.config.listener.ModificationListener;
 import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 import org.blocks4j.reconf.client.setup.Environment;
 import org.blocks4j.reconf.client.setup.config.ConnectionSettings;
+import org.blocks4j.reconf.infra.concurrent.ReconfExecutors;
 import org.blocks4j.reconf.infra.log.LoggerHolder;
 import org.blocks4j.reconf.infra.shutdown.ShutdownBean;
 import org.blocks4j.reconf.throwables.UpdateConfigurationRepositoryException;
@@ -15,44 +20,33 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
 
     private final Environment environment;
 
-    private ConfigurationRepositoryElement configurationRepositoryElement;
-    private ConfigurationRepository repository;
+    private final ConfigurationRepositoryElement configurationRepositoryElement;
+    private final ConfigurationRepository repository;
 
-    private ExecutorService executorService;
+    private final ExecutorService executorService;
+    private final Set<ModificationListener> modificationListeners;
 
     public ConfigurationRepositoryUpdater(Environment environment, ConfigurationRepository repository, ConfigurationRepositoryElement configurationRepositoryElement) {
         this.repository = repository;
         this.environment = environment;
         this.configurationRepositoryElement = configurationRepositoryElement;
+        this.executorService = ReconfExecutors.newReconfThreadExecutor("requisitors");
+        this.modificationListeners = Sets.newConcurrentHashSet();
 
-        this.loadExecutorService();
-
-        this.syncNow(true);
 
         environment.manageShutdownObject(this);
     }
 
-    private void loadExecutorService() {
-        this.executorService = Executors.newCachedThreadPool(new ThreadFactory() {
-            private int threadCount = 0;
-
-            @Override
-            public Thread newThread(Runnable runnable) {
-                Thread thread = new Thread(runnable);
-                thread.setDaemon(true);
-                thread.setName("reconf-requisitor-" + ++threadCount);
-                return thread;
-            }
-        });
+    public void addModificationListener(ModificationListener modificationListener) {
+        this.modificationListeners.add(modificationListener);
     }
 
     @Override
@@ -62,6 +56,10 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
         } catch (Throwable throwable) {
             LoggerHolder.getLog().warn("Error", throwable);
         }
+    }
+
+    public void syncNow() {
+        syncNow(false);
     }
 
     public void syncNow(boolean useLocalCache) {
@@ -107,26 +105,6 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
         return updateErrorSample.isPresent();
     }
 
-    private void throwException(Class<? extends RuntimeException> exceptionClass) {
-        try {
-            Constructor<? extends RuntimeException> constructor = exceptionClass.getConstructor(String.class);
-            constructor.setAccessible(true);
-            throw constructor.newInstance("Error");
-        } catch (Exception ignored) {
-            throw new UpdateConfigurationRepositoryException("Error");
-        }
-    }
-
-    private void throwException(Class<? extends RuntimeException> exceptionClass, Throwable cause) {
-        try {
-            Constructor<? extends RuntimeException> constructor = exceptionClass.getConstructor(String.class, Throwable.class);
-            constructor.setAccessible(true);
-            throw constructor.newInstance("Error", cause);
-        } catch (Exception ignored) {
-            throw new UpdateConfigurationRepositoryException("Error", cause);
-        }
-    }
-
     private CompletableFuture<List<ConfigurationItemUpdateResult>> appendAsyncConfigurationSyncJob(CompletableFuture<List<ConfigurationItemUpdateResult>> fullSyncResultFuture, ConfigurationItemRequisitor requisitor) {
         return appendAsyncConfigurationSyncJob(fullSyncResultFuture, requisitor, null);
     }
@@ -141,7 +119,10 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
         return fullSyncResultFuture.thenCombine(requestFuture,
                                                 (fullSyncResult, currentResult) -> {
                                                     if (currentResult.isSuccess()) {
-                                                        currentResult = this.repository.update(currentResult);
+                                                        ConfigurationItemId configurationItemId = currentResult.getConfigurationItemId();
+
+                                                        this.repository.update(configurationItemId, currentResult.getObject());
+                                                        this.fireModificationEvents(new ModificationEvent(configurationItemId, currentResult.getRawValue()));
                                                     }
                                                     fullSyncResult.add(currentResult);
                                                     return fullSyncResult;
@@ -160,8 +141,41 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
         return requestFuture;
     }
 
+    private void fireModificationEvents(ModificationEvent modificationEvent) {
+        ConfigurationItemId configurationItemId = modificationEvent.getConfigurationItemId();
+        this.modificationListeners.stream()
+                                  .filter(modificationListener -> modificationListener.isEnabled(configurationItemId))
+                                  .forEach(modificationListener -> {
+                                      try {
+                                          modificationListener.onChange(modificationEvent);
+                                      } catch (RuntimeException exception) {
+                                          exception.printStackTrace();
+                                      }
+                                  });
+    }
+
     public Class<?> getRespositoryClass() {
         return this.configurationRepositoryElement.getInterfaceClass();
+    }
+
+    private void throwException(Class<? extends RuntimeException> exceptionClass) {
+        try {
+            Constructor<? extends RuntimeException> constructor = exceptionClass.getConstructor(String.class);
+            constructor.setAccessible(true);
+            throw constructor.newInstance("Error");
+        } catch (Exception ignored) {
+            throw new UpdateConfigurationRepositoryException("Error");
+        }
+    }
+
+    private void throwException(Class<? extends RuntimeException> exceptionClass, Throwable cause) {
+        try {
+            Constructor<? extends RuntimeException> constructor = exceptionClass.getConstructor(String.class, Throwable.class);
+            constructor.setAccessible(true);
+            throw constructor.newInstance("Error", cause);
+        } catch (Exception ignored) {
+            throw new UpdateConfigurationRepositoryException("Error", cause);
+        }
     }
 
     @Override

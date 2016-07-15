@@ -1,6 +1,7 @@
 package org.blocks4j.reconf.client.setup;
 
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
+import org.blocks4j.reconf.client.config.contingency.LocalCache;
 import org.blocks4j.reconf.client.config.update.ConfigurationSource;
 import org.blocks4j.reconf.client.setup.config.ConnectionSettings;
 import org.blocks4j.reconf.client.setup.config.ReconfConfiguration;
@@ -13,7 +14,7 @@ public interface Environment extends ShutdownBean {
 
     ConfigurationSource getRemoteSource();
 
-    ConfigurationSource getLocalCacheSource();
+    LocalCache getLocalCacheSource();
 
     ConfigurationRepository getRepository();
 

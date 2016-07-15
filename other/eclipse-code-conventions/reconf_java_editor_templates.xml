@@ -98,7 +98,7 @@ ${item}.setHeight(${control}.computeSize(SWT.DEFAULT, SWT.DEFAULT).y);</template
 	${cursor}
 }</template><template autoinsert="false" context="java-statements" deleted="false" description="iterate over an array or Iterable" enabled="true" id="org.eclipse.jdt.ui.templates.for_iterable" name="foreach">for (${iterable_type} ${iterable_element} : ${iterable}) {
 	${cursor}
-}</template><template autoinsert="true" context="java-members" deleted="false" description="GET HTTP method" enabled="true" id="com.springsource.sts.quickfix.getHandler" name="GET method">${x:import(org.springframework.web.bind.annotation.RequestMapping, org.springframework.web.bind.annotation.RequestMethod)}@RequestMapping(value="${cursor}${path}", method = RequestMethod.GET)
+}</template><template autoinsert="true" context="java-members" deleted="false" description="GET HTTP method" enabled="true" id="com.springsource.sts.quickfix.getHandler" name="GET method">${x:import(org.springframework.web.bind.annotation.RequestMapping, org.springframework.web.bind.annotation.RequestMethod)}@RequestMapping(name="${cursor}${path}", method = RequestMethod.GET)
 public ${String} ${get}(${Object} ${model}) {
 	// TODO Auto generated method stub
 	return null;
@@ -159,7 +159,7 @@ while (!${shell}.isDisposed()) {
 	if (!${display}.readAndDispatch ()) 
 		${display}.sleep();
 }
-${display}.dispose();</template><template autoinsert="false" context="java" deleted="false" description="create new object" enabled="true" id="org.eclipse.jdt.ui.templates.new" name="new">${type} ${name} = new ${type}(${arguments});</template><template autoinsert="true" context="java" deleted="false" description="Cria um atributo de log" enabled="true" name="newlog">private static final Logger log = LoggerFactory.getLogger(${enclosing_type}.class);</template><template autoinsert="false" context="java" deleted="false" description="non-externalized string marker" enabled="true" id="org.eclipse.jdt.ui.templates.non-nls" name="nls">//$$NON-NLS-${N}$$</template><template autoinsert="true" context="javadoc" deleted="false" description="&lt;code&gt;null&lt;/code&gt;" enabled="true" id="org.eclipse.jdt.ui.templates.code_tag_null" name="null">&lt;code&gt;null&lt;/code&gt;</template><template autoinsert="true" context="java-members" deleted="false" description="POST HTTP method" enabled="true" id="com.springsource.sts.quickfix.postHandler" name="POST method">${x:import(org.springframework.web.bind.annotation.RequestMapping, org.springframework.web.bind.annotation.RequestMethod, org.springframework.validation.BindingResult)}@RequestMapping(value="${cursor}${path}", method = RequestMethod.POST)
+${display}.dispose();</template><template autoinsert="false" context="java" deleted="false" description="create new object" enabled="true" id="org.eclipse.jdt.ui.templates.new" name="new">${type} ${name} = new ${type}(${arguments});</template><template autoinsert="true" context="java" deleted="false" description="Cria um atributo de log" enabled="true" name="newlog">private static final Logger log = LoggerFactory.getLogger(${enclosing_type}.class);</template><template autoinsert="false" context="java" deleted="false" description="non-externalized string marker" enabled="true" id="org.eclipse.jdt.ui.templates.non-nls" name="nls">//$$NON-NLS-${N}$$</template><template autoinsert="true" context="javadoc" deleted="false" description="&lt;code&gt;null&lt;/code&gt;" enabled="true" id="org.eclipse.jdt.ui.templates.code_tag_null" name="null">&lt;code&gt;null&lt;/code&gt;</template><template autoinsert="true" context="java-members" deleted="false" description="POST HTTP method" enabled="true" id="com.springsource.sts.quickfix.postHandler" name="POST method">${x:import(org.springframework.web.bind.annotation.RequestMapping, org.springframework.web.bind.annotation.RequestMethod, org.springframework.validation.BindingResult)}@RequestMapping(name="${cursor}${path}", method = RequestMethod.POST)
 public ${String} ${post}(${Object} ${formObject}, ${BindingResult} ${bindingResult}) {
 	// TODO Auto generated method stub
 	return null;
@@ -173,7 +173,7 @@ public ${String} ${post}(${Object} ${formObject}, ${BindingResult} ${bindingResu
 	${cursor}
 }</template><template autoinsert="false" context="java-members" deleted="false" description="public static method" enabled="true" id="org.eclipse.jdt.ui.templates.public_static_method" name="public_static_method">public static ${return_type} ${name}(${}) {
 	${cursor}
-}</template><template autoinsert="true" context="java-members" deleted="false" description="PUT HTTP method" enabled="true" id="com.springsource.sts.quickfix.putHandler" name="PUT method">${x:import(org.springframework.web.bind.annotation.RequestMapping, org.springframework.web.bind.annotation.RequestMethod, org.springframework.validation.BindingResult)}@RequestMapping(value="${cursor}${path}", method = RequestMethod.PUT)
+}</template><template autoinsert="true" context="java-members" deleted="false" description="PUT HTTP method" enabled="true" id="com.springsource.sts.quickfix.putHandler" name="PUT method">${x:import(org.springframework.web.bind.annotation.RequestMapping, org.springframework.web.bind.annotation.RequestMethod, org.springframework.validation.BindingResult)}@RequestMapping(name="${cursor}${path}", method = RequestMethod.PUT)
 public ${String} ${post}(${Object} ${formObject}, ${BindingResult} ${bindingResult}) {
 	// TODO Auto generated method stub
 	return null;
@@ -219,7 +219,7 @@ ${range}.background= ${bColor:link(null, 'Display.getDefault().getSystemColor(SW
 ${range}.fontStyle= ${fStyle:link(SWT.NORMAL, SWT.ITALIC, SWT.BOLD)};
 ${text:var(org.eclipse.swt.custom.StyledText)}.setStyleRange(${range});
 ${imp:import(org.eclipse.swt.SWT, org.eclipse.swt.widgets.Display)}${cursor}</template><template autoinsert="false" context="java-statements" deleted="false" description="switch case statement" enabled="true" id="org.eclipse.jdt.ui.templates.switch" name="switch">switch (${key}) {
-	case ${value}:
+	case ${name}:
 		${cursor}
 		break;
 

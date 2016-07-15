@@ -15,12 +15,8 @@
  */
 package org.blocks4j.reconf.spring;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import org.blocks4j.reconf.client.config.update.notification.ConfigurationItemListener;
 import org.blocks4j.reconf.client.customization.Customization;
 import org.blocks4j.reconf.client.factory.ConfigurationRepositoryFactory;
-import org.blocks4j.reconf.client.proxy.ConfigurationRepositoryProxyHandler;
 import org.springframework.beans.factory.FactoryBean;
 
 @SuppressWarnings("rawtypes")
@@ -28,11 +24,10 @@ public class RepositoryConfigurationBean implements FactoryBean {
 
     private Class<?> configInterface;
     private Customization customization = new Customization();
-    private Collection<ConfigurationItemListener> configurationItemListeners = new ArrayList<>();
     private ConfigurationRepositoryFactory configurationRepositoryFactory = new ConfigurationRepositoryFactory();
 
     public Object getObject() throws Exception {
-        return configurationRepositoryFactory.get(getConfigInterface(), getCustomization(), configurationItemListeners);
+        return configurationRepositoryFactory.get(getConfigInterface(), getCustomization());
     }
 
     public Class<?> getObjectType() {
@@ -79,9 +74,4 @@ public class RepositoryConfigurationBean implements FactoryBean {
         this.customization.setProductSuffix(productSuffix);
     }
 
-    public void setConfigurationItemListeners(Collection<ConfigurationItemListener> configurationItemListeners) {
-        if (configurationItemListeners != null) {
-            this.configurationItemListeners = configurationItemListeners;
-        }
-    }
 }

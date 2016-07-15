@@ -36,18 +36,21 @@ public class MessagesBundle {
     }
 
     public String get(String key) {
-        updateBundleIfNeeded();
-        return bundle.getString(getPath(key));
+        /*updateBundleIfNeeded();
+        return bundle.getString(getPath(key));*/
+        return "error";
     }
 
     public String format(String key, Object...args) {
-        updateBundleIfNeeded();
-        return String.format(bundle.getString(getPath(key)), args);
+        /*updateBundleIfNeeded();
+        return String.format(bundle.getString(getPath(key)), args);*/
+        return "error";
     }
 
     private String getPath(String key) {
-        updateBundleIfNeeded();
-        return settings.getTailPackageName() + "." + settings.getClassName() + "." + key;
+        /*updateBundleIfNeeded();
+        return settings.getTailPackageName() + "." + settings.getClassName() + "." + key;*/
+        return "error";
     }
 
     private void updateBundleIfNeeded() {

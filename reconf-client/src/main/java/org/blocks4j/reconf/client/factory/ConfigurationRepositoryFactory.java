@@ -15,12 +15,9 @@
  */
 package org.blocks4j.reconf.client.factory;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
 import org.blocks4j.reconf.client.config.update.ConfigurationRepositoryUpdater;
-import org.blocks4j.reconf.client.config.update.notification.ConfigurationItemListener;
 import org.blocks4j.reconf.client.customization.Customization;
-import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 import org.blocks4j.reconf.client.proxy.ConfigurationRepositoryProxyHandler;
 import org.blocks4j.reconf.client.setup.DefaultEnvironment;
@@ -29,11 +26,11 @@ import org.blocks4j.reconf.client.setup.config.ReconfConfiguration;
 import org.blocks4j.reconf.infra.i18n.MessagesBundle;
 import org.blocks4j.reconf.infra.log.LoggerHolder;
 import org.blocks4j.reconf.infra.shutdown.ShutdownBean;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -52,7 +49,6 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
     private ConfigurationRepository repository;
     private ConfigurationRepositoryElementFactory factory;
     private final ConcurrentMap<String, Object> proxyCache;
-    private final ConcurrentMap<String, Collection<? extends ConfigurationItemListener>> listenerCache;
     private final Set<ConfigurationRepositoryUpdater> updatersCreated;
     private final ScheduledExecutorService scheduledExecutorService;
 
@@ -69,7 +65,6 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
 
         this.updatersCreated = new HashSet<>();
         this.proxyCache = new ConcurrentHashMap<>();
-        this.listenerCache = new ConcurrentHashMap<>();
         this.factory = new ConfigurationRepositoryElementFactory(environment.getReconfConfiguration());
         this.repository = environment.getRepository();
 
@@ -92,72 +87,54 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
     }
 
     public synchronized <T> T get(Class<T> arg) {
-        return get(arg, null, null);
-    }
-
-    public synchronized <T> T get(Class<T> arg, Customization customization) {
-        return get(arg, customization, null);
-    }
-
-    public synchronized <T> T get(Class<T> arg, Collection<? extends ConfigurationItemListener> configurationItemListeners) {
-        return get(arg, null, configurationItemListeners);
+        return get(arg, null);
     }
 
     @SuppressWarnings("unchecked")
-    public synchronized <T> T get(Class<T> arg, Customization customization, Collection<? extends ConfigurationItemListener> configurationItemListeners) {
+    public synchronized <T> T get(Class<T> arg, Customization customization) {
         if (customization == null) {
             customization = new Customization();
-        }
-        if (configurationItemListeners == null) {
-            configurationItemListeners = Collections.emptyList();
         }
 
         String key = arg.getName() + customization;
         if (proxyCache.containsKey(key)) {
-            if (CollectionUtils.isEqualCollection(configurationItemListeners, listenerCache.get(key))) {
-                LoggerHolder.getLog().info(msg.format("cached.instance", arg.getName()));
-                return (T) proxyCache.get(key);
-            }
-
-            throw new IllegalArgumentException(msg.format("error.customization", arg.getName()));
+            LoggerHolder.getLog().info(msg.format("cached.instance", arg.getName()));
+            return (T) proxyCache.get(key);
         }
 
         ConfigurationRepositoryElement repo = this.factory.create(arg);
-        repo.setCustomization(customization);
-        repo.setComponent(customization.getCustomComponent(repo.getComponent()));
-        repo.setProduct(customization.getCustomProduct(repo.getProduct()));
-
-        configurationItemListeners.forEach(repo::addConfigurationItemListener);
-
-        for (ConfigurationItemElement item : repo.getConfigurationItems()) {
-            item.setProduct(repo.getProduct());
-            item.setComponent(customization.getCustomComponent(item.getComponent()));
-            item.setValue(customization.getCustomItem(item.getValue()));
-        }
+        repo.applyCustomization(customization);
 
         //LoggerHolder.getLog().info(msg.format("new.instance", LineSeparator.value(), repo.toString()));
 
         Object result = newInstance(arg, repo);
         proxyCache.put(key, result);
-        listenerCache.put(key, configurationItemListeners);
         return (T) result;
     }
 
     @SuppressWarnings("unchecked")
     private synchronized <T> T newInstance(Class<T> arg, ConfigurationRepositoryElement configurationRepositoryElement) {
+        ConfigurationRepositoryUpdater repositoryUpdater = initUpdater(configurationRepositoryElement);
 
-        
-
-        ConfigurationRepositoryUpdater repositoryUpdater = new ConfigurationRepositoryUpdater(this.environment, this.repository, configurationRepositoryElement);
-        this.updatersCreated.add(repositoryUpdater);
-
-        this.scheduleUpdater(configurationRepositoryElement, repositoryUpdater);
-
-        Object proxyInstance = Proxy.newProxyInstance(arg.getClassLoader(), new Class<?>[]{arg}, new ConfigurationRepositoryProxyHandler(this.repository, repositoryUpdater));
+        Object proxyInstance = Proxy.newProxyInstance(arg.getClassLoader(), new Class<?>[]{arg}, new ConfigurationRepositoryProxyHandler(configurationRepositoryElement, this.repository, repositoryUpdater));
 
         this.validateProxyLoad(proxyInstance, arg);
 
         return (T) proxyInstance;
+    }
+
+    @NotNull
+    private ConfigurationRepositoryUpdater initUpdater(ConfigurationRepositoryElement configurationRepositoryElement) {
+        ConfigurationRepositoryUpdater repositoryUpdater = new ConfigurationRepositoryUpdater(this.environment, this.repository, configurationRepositoryElement);
+
+        this.updatersCreated.add(repositoryUpdater);
+
+        repositoryUpdater.addModificationListener(environment.getLocalCacheSource());
+
+        repositoryUpdater.syncNow(true);
+
+        this.scheduleUpdater(configurationRepositoryElement, repositoryUpdater);
+        return repositoryUpdater;
     }
 
     private void validateProxyLoad(Object proxyInstance, Class<?> proxyInterface) {

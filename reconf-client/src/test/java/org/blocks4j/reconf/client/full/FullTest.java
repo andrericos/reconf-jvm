@@ -14,7 +14,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,7 +32,9 @@ public class FullTest extends LocalServerTestBase {
 
         this.host = this.start();
 
-        File tempFolder = Files.createTempDirectory("tests").toFile();
+        /*File tempFolder = Files.createTempDirectory("tests").toFile();*/
+
+        File tempFolder = new File("/tmp");
 
         ReconfConfiguration reconfConfiguration = new ReconfConfiguration();
 
@@ -42,7 +43,7 @@ public class FullTest extends LocalServerTestBase {
         reconfConfiguration.setLocalCacheSettings(localCacheSettings);
 
         ConnectionSettings connectionSettings = new ConnectionSettings();
-        connectionSettings.setUrl(String.format("http://%s:%s", host.getHostName(), host.getPort()));
+        connectionSettings.setUrl(String.format("http://%s:%s1", host.getHostName(), host.getPort()));
 
         reconfConfiguration.setConnectionSettings(connectionSettings);
 
@@ -119,8 +120,6 @@ public class FullTest extends LocalServerTestBase {
         String[] fieldArray = jsonClass.getFieldArray();
         Assert.assertNotNull(fieldArray);
         Assert.assertEquals(3, fieldArray.length);
-
-
     }
 
     @After

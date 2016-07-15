@@ -17,7 +17,8 @@ package org.blocks4j.reconf.client.factory;
 
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.blocks4j.reconf.annotations.ConfigurationRepository;
+import org.blocks4j.reconf.annotations.ConfigurationItem;
+import org.blocks4j.reconf.annotations.UpdateConfigurationRepository;
 import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 import org.blocks4j.reconf.client.setup.config.ReconfConfiguration;
@@ -27,7 +28,10 @@ import org.blocks4j.reconf.infra.log.LoggerHolder;
 import org.blocks4j.reconf.infra.system.LineSeparator;
 import org.blocks4j.reconf.infra.throwables.ReConfInitializationError;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -48,26 +52,42 @@ public class ConfigurationRepositoryElementFactory {
         return result;
     }
 
-    private ConfigurationRepositoryElement createNewRepositoryFor(Class<?> arg) {
-        if (!arg.isInterface()) {
-            throw new ReConfInitializationError(msg.format("error.is.not.interface", arg.getCanonicalName()));
-        }
+    private ConfigurationRepositoryElement createNewRepositoryFor(Class<?> repository) {
+        ConfigurationRepositoryElement configurationRepositoryElement = ConfigurationRepositoryElement.forRepository(repository);
 
-        if (!arg.isAnnotationPresent(ConfigurationRepository.class)) {
+        if (configurationRepositoryElement == null) {
             return null;
         }
 
-        ConfigurationRepository ann = arg.getAnnotation(ConfigurationRepository.class);
-        ConfigurationRepositoryElement result = new ConfigurationRepositoryElement();
-        result.setProduct(ann.product());
-        result.setComponent(ann.component());
-        result.setConnectionSettings(configuration.getConnectionSettings());
-        result.setInterfaceClass(arg);
-        result.setRate(ann.pollingRate());
-        result.setTimeUnit(ann.pollingTimeUnit());
-        result.setConfigurationItems(ConfigurationItemElement.from(result));
-        return result;
+        ConfigurationItemElement.Builder configurationItemBuilder = ConfigurationItemElement.forConfigurationRepositoryElement(configurationRepositoryElement);
+
+        Arrays.stream(repository.getMethods())
+              .map(method -> {
+                  checkAnnotations(method);
+                  return method;
+              })
+              .filter(method -> Modifier.isAbstract(method.getModifiers()))
+              .filter(method -> method.isAnnotationPresent(ConfigurationItem.class))
+              .map(method -> configurationItemBuilder.forMethod(method).build())
+              .forEach(configurationItemElement -> {
+                  override(configurationRepositoryElement, configurationItemElement);
+                  configurationRepositoryElement.getConfigurationItems().add(configurationItemElement);
+              });
+
+
+        return configurationRepositoryElement;
     }
+
+    private void override(ConfigurationRepositoryElement configurationRepositoryElement, ConfigurationItemElement configurationItemElement) {
+        configurationItemElement.override(configurationRepositoryElement);
+    }
+
+    private void checkAnnotations(Method method) {
+        if (!(method.isAnnotationPresent(ConfigurationItem.class) || method.isAnnotationPresent(UpdateConfigurationRepository.class))) {
+            throw new ReConfInitializationError(msg.format("error.not.configured.method", method.toString()));
+        }
+    }
+
 
     private void validate(ConfigurationRepositoryElement arg) {
         if (arg == null) {

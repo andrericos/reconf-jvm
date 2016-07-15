@@ -16,6 +16,7 @@
 package org.blocks4j.reconf.client.config.update;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.blocks4j.reconf.client.config.ConfigurationItemId;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -29,9 +30,7 @@ public class ConfigurationItemUpdateResult implements Cloneable {
     private boolean success;
     private Type type;
     private Object object;
-    private String product;
-    private String component;
-    private String item;
+    private ConfigurationItemId configurationItemId;
     private Method method;
     private Class<?> cast;
     private String rawValue;
@@ -45,16 +44,8 @@ public class ConfigurationItemUpdateResult implements Cloneable {
         return object;
     }
 
-    public String getProduct() {
-        return product;
-    }
-
-    public String getComponent() {
-        return component;
-    }
-
-    public String getItem() {
-        return item;
+    public ConfigurationItemId getConfigurationItemId() {
+        return configurationItemId;
     }
 
     public Method getMethod() {
@@ -136,18 +127,8 @@ public class ConfigurationItemUpdateResult implements Cloneable {
             return this;
         }
 
-        public Builder product(String product) {
-            this.inner.product = product;
-            return this;
-        }
-
-        public Builder component(String component) {
-            this.inner.component = component;
-            return this;
-        }
-
-        public Builder item(String item) {
-            this.inner.item = item;
+        public Builder configurationItemId(ConfigurationItemId configurationItemId) {
+            this.inner.configurationItemId = configurationItemId;
             return this;
         }
 

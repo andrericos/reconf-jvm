@@ -17,21 +17,35 @@ package org.blocks4j.reconf.client.proxy;
 
 import org.blocks4j.reconf.annotations.ConfigurationItem;
 import org.blocks4j.reconf.annotations.UpdateConfigurationRepository;
+import org.blocks4j.reconf.client.config.ConfigurationItemId;
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
 import org.blocks4j.reconf.client.config.update.ConfigurationRepositoryUpdater;
+import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
+import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ConfigurationRepositoryProxyHandler implements InvocationHandler {
 
     private final ConfigurationRepository repository;
 
     private final ConfigurationRepositoryUpdater repositoryUpdater;
+    private final Map<Method, ConfigurationItemId> configurationIdsByMethods;
 
-    public ConfigurationRepositoryProxyHandler(ConfigurationRepository repository, ConfigurationRepositoryUpdater repositoryUpdater) {
+    public ConfigurationRepositoryProxyHandler(ConfigurationRepositoryElement configurationRepositoryElement, ConfigurationRepository repository, ConfigurationRepositoryUpdater repositoryUpdater) {
+        this.configurationIdsByMethods = this.extractConfigurationIdsByMethods(configurationRepositoryElement);
         this.repository = repository;
         this.repositoryUpdater = repositoryUpdater;
+    }
+
+    private Map<Method, ConfigurationItemId> extractConfigurationIdsByMethods(ConfigurationRepositoryElement configurationRepositoryElement) {
+        return configurationRepositoryElement.getConfigurationItems()
+                                             .stream()
+                                             .collect(Collectors.toMap(ConfigurationItemElement::getMethod,
+                                                                       ConfigurationItemElement::getConfigurationItemId));
     }
 
     @Override
@@ -50,7 +64,7 @@ public class ConfigurationRepositoryProxyHandler implements InvocationHandler {
         Object configValue = null;
 
         if (configurationAnnotationPresent) {
-            configValue = repository.getValueOf(method);
+            configValue = repository.getValueOf(this.configurationIdsByMethods.get(method));
         }
 
         return configValue;

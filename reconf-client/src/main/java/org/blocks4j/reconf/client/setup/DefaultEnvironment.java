@@ -1,6 +1,6 @@
 package org.blocks4j.reconf.client.setup;
 
-import org.blocks4j.reconf.client.config.MapDBConfigurationRepository;
+import org.blocks4j.reconf.client.config.MemoryConfigurationRepository;
 import org.blocks4j.reconf.client.setup.config.ReconfConfiguration;
 import org.blocks4j.reconf.client.setup.config.parser.PropertiesParser;
 import org.blocks4j.reconf.infra.io.ClasspathInputStream;
@@ -16,15 +16,15 @@ public class DefaultEnvironment extends AbstractEnvironment {
     private static final String SYSTEM_PROPERTY_PREFIX = "reconf.client.file.properties.prefix";
 
     public DefaultEnvironment(ReconfConfiguration reconfConfiguration) {
-        super(reconfConfiguration, getMapDBConfigurationRepository(reconfConfiguration));
+        super(reconfConfiguration, getMemoryConfigurationRepository(reconfConfiguration));
     }
 
     public DefaultEnvironment() {
         this(getDefaultReconfConfiguration());
     }
 
-    private static MapDBConfigurationRepository getMapDBConfigurationRepository(ReconfConfiguration reconfConfiguration) {
-        return new MapDBConfigurationRepository(reconfConfiguration.getLocalCacheSettings());
+    private static MemoryConfigurationRepository getMemoryConfigurationRepository(ReconfConfiguration reconfConfiguration) {
+        return new MemoryConfigurationRepository();
     }
 
     private static ReconfConfiguration getDefaultReconfConfiguration() {

@@ -37,27 +37,18 @@ public class ConfigurationItemElementValidator {
 
         Map<String, String> errors = new LinkedHashMap<>();
         String prefix = getPrefix(pos);
-        checkMethodName(prefix, arg, errors);
         checkValue(prefix, arg, errors);
         checkAdapter(prefix, arg, errors);
         checkMethod(prefix, arg, errors);
         return errors;
     }
 
-    private static void checkMethodName(String prefix, ConfigurationItemElement arg, Map<String, String> errors) {
-        if (arg.getMethodName() == null) {
-            errors.put(prefix + "methodName", "is null");
-        }
-        if (arg.getMethodName() != null && StringUtils.isEmpty(arg.getMethodName())) {
-            errors.put(prefix + "methodName", "is empty");
-        }
-    }
-
     private static void checkValue(String prefix, ConfigurationItemElement arg, Map<String, String> errors) {
-        if (arg.getValue() == null) {
+        String name = arg.getConfigurationItemId().getName();
+        if (name == null) {
             errors.put(prefix + "@ConfigurationItem", msg.get("error.value"));
         }
-        if (arg.getValue() != null && StringUtils.isEmpty(arg.getValue())) {
+        if (name != null && StringUtils.isEmpty(name)) {
             errors.put(prefix + "@ConfigurationItem", msg.get("error.value"));
         }
     }

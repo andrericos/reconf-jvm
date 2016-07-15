@@ -1,17 +1,17 @@
 grammar Reconf;
 
-value : primitive
+name : primitive
        | structure;
 
 structure: OPEN_BRACKET CLOSE_BRACKET
           |collection
           | map;
 
-collection: '[' value (',' value)* ']';
+collection: '[' name (',' name)* ']';
 
 map: '[' mapEntry (',' mapEntry)* ']';
 
-mapEntry : primitive ':' value;
+mapEntry : primitive ':' name;
 
 primitive : LITERAL;
 
