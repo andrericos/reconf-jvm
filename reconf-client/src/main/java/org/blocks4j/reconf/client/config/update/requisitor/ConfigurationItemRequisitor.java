@@ -13,11 +13,14 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-package org.blocks4j.reconf.client.config.update;
+package org.blocks4j.reconf.client.config.update.requisitor;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.blocks4j.reconf.adapter.ConfigurationAdapter;
 import org.blocks4j.reconf.client.config.ConfigurationItemId;
+import org.blocks4j.reconf.client.config.update.ConfigurationItemUpdateResult;
+import org.blocks4j.reconf.client.config.update.source.ConfigurationResponse;
+import org.blocks4j.reconf.client.config.update.source.ConfigurationSource;
 import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
 import org.blocks4j.reconf.data.MethodReturnData;
 import org.blocks4j.reconf.infra.i18n.MessagesBundle;

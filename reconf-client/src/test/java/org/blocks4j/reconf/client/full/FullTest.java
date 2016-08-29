@@ -43,7 +43,7 @@ public class FullTest extends LocalServerTestBase {
         reconfConfiguration.setLocalCacheSettings(localCacheSettings);
 
         ConnectionSettings connectionSettings = new ConnectionSettings();
-        connectionSettings.setUrl(String.format("http://%s:%s1", host.getHostName(), host.getPort()));
+        connectionSettings.setUrl(String.format("http://%s:%s", host.getHostName(), host.getPort()));
 
         reconfConfiguration.setConnectionSettings(connectionSettings);
 
@@ -81,8 +81,8 @@ public class FullTest extends LocalServerTestBase {
         }
 
         Map<Integer, Set<String>> integerSetStringMap_someEmpty = reconfTest.getIntegerSetStringMap_SecondEmpty();
-        Assert.assertNotNull(integerSetStringMap_allFull);
-        for (Map.Entry<Integer, Set<String>> integerSetStringMap_allFullEntry : integerSetStringMap_allFull.entrySet()) {
+        Assert.assertNotNull(integerSetStringMap_someEmpty);
+        for (Map.Entry<Integer, Set<String>> integerSetStringMap_allFullEntry : integerSetStringMap_someEmpty.entrySet()) {
             Assert.assertNotNull(integerSetStringMap_allFullEntry.getKey());
             Assert.assertNotNull(integerSetStringMap_allFullEntry.getValue());
         }

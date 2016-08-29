@@ -16,7 +16,8 @@
 package org.blocks4j.reconf.client.factory;
 
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
-import org.blocks4j.reconf.client.config.update.ConfigurationRepositoryUpdater;
+import org.blocks4j.reconf.client.config.update.RemoteConfigurationRepositoryUpdater;
+import org.blocks4j.reconf.client.config.update.RemoteWithLocalCacheConfigurationRepositoryUpdater;
 import org.blocks4j.reconf.client.customization.Customization;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 import org.blocks4j.reconf.client.proxy.ConfigurationRepositoryProxyHandler;
@@ -26,7 +27,6 @@ import org.blocks4j.reconf.client.setup.config.ReconfConfiguration;
 import org.blocks4j.reconf.infra.i18n.MessagesBundle;
 import org.blocks4j.reconf.infra.log.LoggerHolder;
 import org.blocks4j.reconf.infra.shutdown.ShutdownBean;
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -49,7 +49,7 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
     private ConfigurationRepository repository;
     private ConfigurationRepositoryElementFactory factory;
     private final ConcurrentMap<String, Object> proxyCache;
-    private final Set<ConfigurationRepositoryUpdater> updatersCreated;
+    private final Set<RemoteConfigurationRepositoryUpdater> updatersCreated;
     private final ScheduledExecutorService scheduledExecutorService;
 
     public ConfigurationRepositoryFactory() {
@@ -114,7 +114,7 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
 
     @SuppressWarnings("unchecked")
     private synchronized <T> T newInstance(Class<T> arg, ConfigurationRepositoryElement configurationRepositoryElement) {
-        ConfigurationRepositoryUpdater repositoryUpdater = initUpdater(configurationRepositoryElement);
+        RemoteConfigurationRepositoryUpdater repositoryUpdater = initUpdater(configurationRepositoryElement);
 
         Object proxyInstance = Proxy.newProxyInstance(arg.getClassLoader(), new Class<?>[]{arg}, new ConfigurationRepositoryProxyHandler(configurationRepositoryElement, this.repository, repositoryUpdater));
 
@@ -123,18 +123,21 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
         return (T) proxyInstance;
     }
 
-    @NotNull
-    private ConfigurationRepositoryUpdater initUpdater(ConfigurationRepositoryElement configurationRepositoryElement) {
-        ConfigurationRepositoryUpdater repositoryUpdater = new ConfigurationRepositoryUpdater(this.environment, this.repository, configurationRepositoryElement);
+    private RemoteConfigurationRepositoryUpdater initUpdater(ConfigurationRepositoryElement configurationRepositoryElement) {
+        RemoteConfigurationRepositoryUpdater repositoryUpdater = new RemoteConfigurationRepositoryUpdater(this.environment, this.repository, configurationRepositoryElement);
+        repositoryUpdater.addModificationListener(environment.getLocalCacheSource());
 
         this.updatersCreated.add(repositoryUpdater);
 
-        repositoryUpdater.addModificationListener(environment.getLocalCacheSource());
-
-        repositoryUpdater.syncNow(true);
+        this.firstLoad(configurationRepositoryElement);
 
         this.scheduleUpdater(configurationRepositoryElement, repositoryUpdater);
         return repositoryUpdater;
+    }
+
+    private void firstLoad(ConfigurationRepositoryElement configurationRepositoryElement) {
+        RemoteWithLocalCacheConfigurationRepositoryUpdater repositoryUpdater = new RemoteWithLocalCacheConfigurationRepositoryUpdater(this.environment, this.repository, configurationRepositoryElement);
+        repositoryUpdater.syncNow();
     }
 
     private void validateProxyLoad(Object proxyInstance, Class<?> proxyInterface) {
@@ -152,7 +155,7 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
         }
     }
 
-    private void scheduleUpdater(ConfigurationRepositoryElement configurationRepositoryElement, ConfigurationRepositoryUpdater repositoryUpdater) {
+    private void scheduleUpdater(ConfigurationRepositoryElement configurationRepositoryElement, RemoteConfigurationRepositoryUpdater repositoryUpdater) {
         this.scheduledExecutorService.scheduleWithFixedDelay(repositoryUpdater, configurationRepositoryElement.getRate(), configurationRepositoryElement.getRate(), configurationRepositoryElement.getTimeUnit());
     }
 
@@ -160,7 +163,7 @@ public class ConfigurationRepositoryFactory implements ShutdownBean {
         return this.environment;
     }
 
-    public Set<ConfigurationRepositoryUpdater> getUpdatersCreated() {
+    public Set<RemoteConfigurationRepositoryUpdater> getUpdatersCreated() {
         return Collections.unmodifiableSet(this.updatersCreated);
     }
 

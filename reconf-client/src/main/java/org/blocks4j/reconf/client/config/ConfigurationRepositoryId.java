@@ -3,9 +3,10 @@ package org.blocks4j.reconf.client.config;
 import org.apache.commons.lang3.StringUtils;
 import org.blocks4j.reconf.client.customization.Customization;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class ConfigurationRepositoryId {
+public class ConfigurationRepositoryId implements Serializable {
 
     private final String product;
 

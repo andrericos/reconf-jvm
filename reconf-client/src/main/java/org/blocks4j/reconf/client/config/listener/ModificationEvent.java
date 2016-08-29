@@ -6,10 +6,12 @@ public class ModificationEvent {
 
     private final ConfigurationItemId configurationItemId;
     private final String newValue;
+    private final Object convertedValue;
 
-    public ModificationEvent(ConfigurationItemId configurationItemId, String newValue) {
+    public ModificationEvent(ConfigurationItemId configurationItemId, String newValue, Object convertedValue) {
         this.configurationItemId = configurationItemId;
         this.newValue = newValue;
+        this.convertedValue = convertedValue;
     }
 
     public ConfigurationItemId getConfigurationItemId() {
@@ -18,5 +20,9 @@ public class ModificationEvent {
 
     public String getNewValue() {
         return newValue;
+    }
+
+    public Object getConvertedValue() {
+        return this.convertedValue;
     }
 }

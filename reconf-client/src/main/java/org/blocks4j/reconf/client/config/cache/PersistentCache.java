@@ -1,30 +1,36 @@
-package org.blocks4j.reconf.client.config.contingency;
+package org.blocks4j.reconf.client.config.cache;
 
 import org.blocks4j.reconf.client.config.ConfigurationItemId;
 import org.blocks4j.reconf.client.config.listener.ModificationEvent;
-import org.blocks4j.reconf.client.config.update.ConfigurationResponse;
-import org.blocks4j.reconf.client.config.update.SourceType;
+import org.blocks4j.reconf.client.config.update.source.ConfigurationResponse;
+import org.blocks4j.reconf.client.config.update.source.SourceType;
 import org.blocks4j.reconf.client.setup.config.LocalCacheSettings;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.Serializer;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class LocalCacheImpl implements LocalCache {
+@SuppressWarnings("unchecked")
+public class PersistentCache implements LocalCache {
 
     private static final String CONFIGURATION_ITEM_ID_KEY_FORMAT = "%s#%s##%s###";
 
     private final Map<String, String> repository;
 
     private final DB db;
+    private final List<ChangeHistoryItem> history;
 
-    public LocalCacheImpl(LocalCacheSettings localCacheSettings) {
+    public PersistentCache(LocalCacheSettings localCacheSettings) {
         this.db = this.createMapDB(localCacheSettings);
         this.repository = this.db.hashMap("repository", Serializer.STRING, Serializer.STRING)
                                  .createOrOpen();
+
+        this.history = (List<ChangeHistoryItem>) this.db.indexTreeList("history", Serializer.JAVA)
+                                                        .createOrOpen();
     }
 
     private DB createMapDB(LocalCacheSettings localCacheSettings) {
@@ -64,6 +70,7 @@ public class LocalCacheImpl implements LocalCache {
 
         if (!Objects.equals(oldValue, newValue)) {
             this.repository.put(configurationItemIdKey, newValue);
+            this.history.add(new ChangeHistoryItem(modificationEvent.getConfigurationItemId(), newValue));
         }
     }
 

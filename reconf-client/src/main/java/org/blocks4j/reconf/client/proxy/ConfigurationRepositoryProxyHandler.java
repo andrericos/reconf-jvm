@@ -19,7 +19,7 @@ import org.blocks4j.reconf.annotations.ConfigurationItem;
 import org.blocks4j.reconf.annotations.UpdateConfigurationRepository;
 import org.blocks4j.reconf.client.config.ConfigurationItemId;
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
-import org.blocks4j.reconf.client.config.update.ConfigurationRepositoryUpdater;
+import org.blocks4j.reconf.client.config.update.RemoteConfigurationRepositoryUpdater;
 import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 
@@ -32,10 +32,10 @@ public class ConfigurationRepositoryProxyHandler implements InvocationHandler {
 
     private final ConfigurationRepository repository;
 
-    private final ConfigurationRepositoryUpdater repositoryUpdater;
+    private final RemoteConfigurationRepositoryUpdater repositoryUpdater;
     private final Map<Method, ConfigurationItemId> configurationIdsByMethods;
 
-    public ConfigurationRepositoryProxyHandler(ConfigurationRepositoryElement configurationRepositoryElement, ConfigurationRepository repository, ConfigurationRepositoryUpdater repositoryUpdater) {
+    public ConfigurationRepositoryProxyHandler(ConfigurationRepositoryElement configurationRepositoryElement, ConfigurationRepository repository, RemoteConfigurationRepositoryUpdater repositoryUpdater) {
         this.configurationIdsByMethods = this.extractConfigurationIdsByMethods(configurationRepositoryElement);
         this.repository = repository;
         this.repositoryUpdater = repositoryUpdater;

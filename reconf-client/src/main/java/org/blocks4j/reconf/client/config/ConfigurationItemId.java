@@ -2,9 +2,10 @@ package org.blocks4j.reconf.client.config;
 
 import org.blocks4j.reconf.client.customization.Customization;
 
+import java.io.Serializable;
 import java.util.Objects;
 
-public class ConfigurationItemId {
+public class ConfigurationItemId implements Serializable{
 
     private final ConfigurationRepositoryId configurationRepositoryId;
 

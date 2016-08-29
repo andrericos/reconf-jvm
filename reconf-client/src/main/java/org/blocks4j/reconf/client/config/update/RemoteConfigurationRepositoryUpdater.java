@@ -5,6 +5,7 @@ import org.blocks4j.reconf.client.config.ConfigurationItemId;
 import org.blocks4j.reconf.client.config.ConfigurationRepository;
 import org.blocks4j.reconf.client.config.listener.ModificationEvent;
 import org.blocks4j.reconf.client.config.listener.ModificationListener;
+import org.blocks4j.reconf.client.config.update.requisitor.ConfigurationItemRequisitor;
 import org.blocks4j.reconf.client.elements.ConfigurationItemElement;
 import org.blocks4j.reconf.client.elements.ConfigurationRepositoryElement;
 import org.blocks4j.reconf.client.setup.Environment;
@@ -24,7 +25,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
+public class RemoteConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
 
     private final Environment environment;
 
@@ -34,7 +35,7 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
     private final ExecutorService executorService;
     private final Set<ModificationListener> modificationListeners;
 
-    public ConfigurationRepositoryUpdater(Environment environment, ConfigurationRepository repository, ConfigurationRepositoryElement configurationRepositoryElement) {
+    public RemoteConfigurationRepositoryUpdater(Environment environment, ConfigurationRepository repository, ConfigurationRepositoryElement configurationRepositoryElement) {
         this.repository = repository;
         this.environment = environment;
         this.configurationRepositoryElement = configurationRepositoryElement;
@@ -52,40 +53,24 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
     @Override
     public void run() {
         try {
-            syncNow(false);
+            syncNow();
         } catch (Throwable throwable) {
             LoggerHolder.getLog().warn("Error", throwable);
         }
     }
 
     public void syncNow() {
-        syncNow(false);
-    }
-
-    public void syncNow(boolean useLocalCache) {
-        this.syncNow(UpdateConfigurationRepositoryException.class, useLocalCache);
+        this.syncNow(UpdateConfigurationRepositoryException.class);
     }
 
     public void syncNow(Class<? extends RuntimeException> exceptionClass) {
-        this.syncNow(exceptionClass, false);
-    }
-
-    public void syncNow(Class<? extends RuntimeException> exceptionClass, boolean useLocalCache) {
         List<ConfigurationItemUpdateResult> fullSyncResult = Collections.synchronizedList(new ArrayList<>());
         CompletableFuture<List<ConfigurationItemUpdateResult>> fullSyncResultFuture = CompletableFuture.completedFuture(fullSyncResult);
 
         try {
 
             for (ConfigurationItemElement configurationItemElement : this.configurationRepositoryElement.getConfigurationItems()) {
-                ConfigurationItemRequisitor remoteRequisitor = new ConfigurationItemRequisitor(configurationItemElement, environment.getRemoteSource());
-
-                if (useLocalCache) {
-                    ConfigurationItemRequisitor localRequisitor = new ConfigurationItemRequisitor(configurationItemElement, environment.getLocalCacheSource());
-                    fullSyncResultFuture = this.appendAsyncConfigurationSyncJob(fullSyncResultFuture, remoteRequisitor, localRequisitor);
-                } else {
-                    fullSyncResultFuture = this.appendAsyncConfigurationSyncJob(fullSyncResultFuture, remoteRequisitor);
-                }
-
+                fullSyncResultFuture = this.appendAsyncConfigurationSyncJob(fullSyncResultFuture, configurationItemElement);
             }
 
             ConnectionSettings connectionSettings = this.environment.getConnectionSettings();
@@ -101,44 +86,40 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
 
     private boolean hasError(Collection<ConfigurationItemUpdateResult> updateResults) {
         Optional<ConfigurationItemUpdateResult> updateErrorSample = updateResults.stream()
-                                                                                 .filter(ConfigurationItemUpdateResult::isFailure).findFirst();
+                                                                                 .filter(ConfigurationItemUpdateResult::isFailure)
+                                                                                 .findFirst();
         return updateErrorSample.isPresent();
     }
 
-    private CompletableFuture<List<ConfigurationItemUpdateResult>> appendAsyncConfigurationSyncJob(CompletableFuture<List<ConfigurationItemUpdateResult>> fullSyncResultFuture, ConfigurationItemRequisitor requisitor) {
-        return appendAsyncConfigurationSyncJob(fullSyncResultFuture, requisitor, null);
+    private CompletableFuture<List<ConfigurationItemUpdateResult>> appendAsyncConfigurationSyncJob(CompletableFuture<List<ConfigurationItemUpdateResult>> fullSyncResultFuture, ConfigurationItemElement configurationItemElement) {
+        CompletableFuture<ConfigurationItemUpdateResult> requestFuture = this.doAsyncRequest(this.environment, configurationItemElement);
+
+        return registerResults(fullSyncResultFuture, requestFuture);
     }
 
-    private CompletableFuture<List<ConfigurationItemUpdateResult>> appendAsyncConfigurationSyncJob(CompletableFuture<List<ConfigurationItemUpdateResult>> fullSyncResultFuture, ConfigurationItemRequisitor remoteRequisitor, ConfigurationItemRequisitor localRequisitor) {
-        CompletableFuture<ConfigurationItemUpdateResult> requestFuture = CompletableFuture.supplyAsync(remoteRequisitor::doRequest, this.executorService);
 
-        if (localRequisitor != null) {
-            requestFuture = this.enableLocalRequest(requestFuture, localRequisitor);
-        }
+    protected CompletableFuture<ConfigurationItemUpdateResult> doAsyncRequest(Environment environment, ConfigurationItemElement configurationItemElement) {
+        ConfigurationItemRequisitor remoteRequisitor = new ConfigurationItemRequisitor(configurationItemElement, environment.getRemoteSource());
 
+        return CompletableFuture.supplyAsync(remoteRequisitor::doRequest, this.executorService);
+    }
+
+    private CompletableFuture<List<ConfigurationItemUpdateResult>> registerResults(CompletableFuture<List<ConfigurationItemUpdateResult>> fullSyncResultFuture, CompletableFuture<ConfigurationItemUpdateResult> requestFuture) {
         return fullSyncResultFuture.thenCombine(requestFuture,
                                                 (fullSyncResult, currentResult) -> {
                                                     if (currentResult.isSuccess()) {
                                                         ConfigurationItemId configurationItemId = currentResult.getConfigurationItemId();
 
-                                                        this.repository.update(configurationItemId, currentResult.getObject());
-                                                        this.fireModificationEvents(new ModificationEvent(configurationItemId, currentResult.getRawValue()));
+                                                        Object convertedValue = currentResult.getObject();
+
+                                                        this.repository.update(configurationItemId, convertedValue);
+                                                        this.fireModificationEvents(new ModificationEvent(configurationItemId,
+                                                                                                          currentResult.getRawValue(),
+                                                                                                          convertedValue));
                                                     }
                                                     fullSyncResult.add(currentResult);
                                                     return fullSyncResult;
                                                 });
-    }
-
-    private CompletableFuture<ConfigurationItemUpdateResult> enableLocalRequest(CompletableFuture<ConfigurationItemUpdateResult> requestFuture, ConfigurationItemRequisitor localRequisitor) {
-        requestFuture = requestFuture.thenApply(configurationItemUpdateResult -> {
-            ConfigurationItemUpdateResult finalResult = configurationItemUpdateResult;
-            if (configurationItemUpdateResult.isFailure()) {
-                finalResult = localRequisitor.doRequest();
-            }
-
-            return finalResult;
-        });
-        return requestFuture;
     }
 
     private void fireModificationEvents(ModificationEvent modificationEvent) {
@@ -163,8 +144,8 @@ public class ConfigurationRepositoryUpdater implements Runnable, ShutdownBean {
             Constructor<? extends RuntimeException> constructor = exceptionClass.getConstructor(String.class);
             constructor.setAccessible(true);
             throw constructor.newInstance("Error");
-        } catch (Exception ignored) {
-            throw new UpdateConfigurationRepositoryException("Error");
+        } catch (Exception e) {
+            throw new UpdateConfigurationRepositoryException("Error", e);
         }
     }
 
